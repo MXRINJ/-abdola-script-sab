@@ -1,137 +1,121 @@
--- Load Rayfield
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Window
 local Window = Rayfield:CreateWindow({
-    Name = "Abdola Script",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "Made by: Abdola",
-    ConfigurationSaving = {
-        Enabled = false
-    }
+   Name = "Abdola Script",
+   LoadingTitle = "Abdola Script",
+   LoadingSubtitle = "By: Abdola",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   Discord = {
+      Enabled = false,
+   },
+   KeySystem = false,
 })
 
--- Tab
 local Tab = Window:CreateTab("Main", 4483362458)
 
--- Player
-local Player = game.Players.LocalPlayer
-
----------------------------------------------------
--- INFINITE JUMP
----------------------------------------------------
+-- Infinite Jump
 local infJumpEnabled = false
 
-local InfJumpDesc = Tab:CreateParagraph({
-    Title = "Infinite Jump",
-    Content = "Jump endlessly with no limit and reach any height."
-})
-InfJumpDesc:Set(false)
-
 Tab:CreateToggle({
-    Name = "Infinite Jump (OFF/ON)",
-    CurrentValue = false,
-    Callback = function(Value)
-        infJumpEnabled = Value
-        InfJumpDesc:Set(Value)
-    end,
+   Name = "Infinite Jump",
+   CurrentValue = false,
+   Callback = function(Value)
+      infJumpEnabled = Value
+   end,
 })
 
--- Infinite Jump Logic
 game:GetService("UserInputService").JumpRequest:Connect(function()
-    if infJumpEnabled and Player.Character and Player.Character:FindFirstChild("Humanoid") then
-        Player.Character:FindFirstChild("Humanoid"):ChangeState("Jumping")
-    end
+   if infJumpEnabled then
+      game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+   end
 end)
 
----------------------------------------------------
--- WALK SPEED
----------------------------------------------------
-local WalkDesc = Tab:CreateParagraph({
-    Title = "Walk Speed",
-    Content = "Adjust your movement speed to go faster than normal."
-})
-WalkDesc:Set(false)
+-- WalkSpeed
+local walkSpeedAmount = 16
 
-local SpeedBox = Tab:CreateInput({
-    Name = "Set Speed",
-    PlaceholderText = "Enter speed (e.g. 50)",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        if tonumber(Text) and Player.Character then
-            Player.Character:FindFirstChild("Humanoid").WalkSpeed = tonumber(Text)
-        end
-    end,
-})
-SpeedBox:Set(false)
-
-local walkEnabled = false
-
-Tab:CreateToggle({
-    Name = "Walk Speed (OFF/ON)",
-    CurrentValue = false,
-    Callback = function(Value)
-        walkEnabled = Value
-        WalkDesc:Set(Value)
-        SpeedBox:Set(Value)
-
-        if not Value and Player.Character then
-            Player.Character:FindFirstChild("Humanoid").WalkSpeed = 16
-        end
-    end,
+Tab:CreateInput({
+   Name = "Walk Speed Amount",
+   PlaceholderText = "Enter number",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      walkSpeedAmount = tonumber(Text) or 16
+   end,
 })
 
----------------------------------------------------
--- INVISIBILITY
----------------------------------------------------
-local InvisDesc = Tab:CreateParagraph({
-    Title = "Become Invisible",
-    Content = "Become fully invisible to others, even while holding tools."
+Tab:CreateButton({
+   Name = "Enable Walk Speed",
+   Callback = function()
+      local char = game.Players.LocalPlayer.Character
+      if char and char:FindFirstChildOfClass("Humanoid") then
+         char:FindFirstChildOfClass("Humanoid").WalkSpeed = walkSpeedAmount
+      end
+   end,
 })
-InvisDesc:Set(false)
 
-local invisible = false
+-- Fly
+local flying = false
+local flySpeed = 50
 
-Tab:CreateToggle({
-    Name = "Become Invisible (OFF/ON)",
-    CurrentValue = false,
-    Callback = function(Value)
-        invisible = Value
-        InvisDesc:Set(Value)
+Tab:CreateButton({
+   Name = "Fly",
+   Callback = function()
+      flying = not flying
 
-        if Player.Character then
-            for _, v in pairs(Player.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.Transparency = Value and 1 or 0
-                elseif v:IsA("Decal") then
-                    v.Transparency = Value and 1 or 0
-                end
+      local player = game.Players.LocalPlayer
+      local char = player.Character
+      local hrp = char:WaitForChild("HumanoidRootPart")
+
+      if flying then
+         local bv = Instance.new("BodyVelocity")
+         bv.Name = "FlyVelocity"
+         bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+         bv.Velocity = Vector3.new(0,0,0)
+         bv.Parent = hrp
+
+         game:GetService("RunService").RenderStepped:Connect(function()
+            if flying and bv then
+               local cam = workspace.CurrentCamera
+               local moveDir = Vector3.new(0,0,0)
+
+               if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
+                  moveDir = moveDir + cam.CFrame.LookVector
+               end
+               if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
+                  moveDir = moveDir - cam.CFrame.LookVector
+               end
+               if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
+                  moveDir = moveDir - cam.CFrame.RightVector
+               end
+               if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
+                  moveDir = moveDir + cam.CFrame.RightVector
+               end
+
+               bv.Velocity = moveDir * flySpeed
             end
-        end
-    end,
+         end)
+      else
+         if hrp:FindFirstChild("FlyVelocity") then
+            hrp.FlyVelocity:Destroy()
+         end
+      end
+   end,
 })
 
----------------------------------------------------
--- CHARACTER RESPAWN FIX (reapply effects)
----------------------------------------------------
-Player.CharacterAdded:Connect(function(char)
-    wait(1)
+Tab:CreateInput({
+   Name = "Fly Speed Amount",
+   PlaceholderText = "Enter number",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      flySpeed = tonumber(Text) or 50
+   end,
+})
 
-    if walkEnabled then
-        char:FindFirstChild("Humanoid").WalkSpeed = 50
-    end
-
-    if invisible then
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") or v:IsA("Decal") then
-                v.Transparency = 1
-            end
-        end
-    end
-end)
-
-Rayfield:Notify({
-    Title = "Abdola Script",
-    Content = "Successfully Loaded!",
-    Duration = 5
+Tab:CreateButton({
+   Name = "Enable Fly Speed",
+   Callback = function()
+      -- Fly is already active, this just updates speed
+      print("Fly speed set to:", flySpeed)
+   end,
 })
